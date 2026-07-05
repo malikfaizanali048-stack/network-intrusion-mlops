@@ -11,3 +11,4 @@ mlruns/
 **/mlruns/
 models/*.pkl
 models/**/*.pkl
+src/models/*.pkl
