@@ -1,3 +1,5 @@
+venv/
+.venv/
 data/raw/*.csv
 data/*.csv
 venv/
