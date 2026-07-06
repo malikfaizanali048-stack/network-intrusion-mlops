@@ -5,7 +5,10 @@ import pandas as pd
 
 app = FastAPI(title="Network Intrusion Detection API")
 
-model = joblib.load("models/random_forest_binary.pkl")
+import os
+
+MODEL_PATH = "models/random_forest_binary.pkl"
+model = joblib.load(MODEL_PATH) if os.path.exists(MODEL_PATH) else None
 
 class TrafficFeatures(BaseModel):
     features: dict
@@ -22,6 +25,11 @@ def predict(data: TrafficFeatures):
     
     result = "ATTACK" if prediction == 1 else "BENIGN"
     confidence = float(max(probability))
+    
+    return {
+        "prediction": result,
+        "confidence": confidence
+    }
     
     return {
         "prediction": result,
