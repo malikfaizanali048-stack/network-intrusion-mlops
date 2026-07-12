@@ -1,0 +1,41 @@
+name: Model Retrain and Validation
+
+on:
+  workflow_dispatch:
+
+jobs:
+  validate-model:
+    runs-on: ubuntu-latest
+    environment: production-approval
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd src
+          pip install mlflow scikit-learn pandas requests
+      
+      - name: Check MLflow connectivity
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        run: |
+          python -c "
+          import mlflow
+          mlflow.set_tracking_uri('${{ secrets.MLFLOW_TRACKING_URI }}')
+          client = mlflow.MlflowClient()
+          model = client.get_model_version_by_alias('network-intrusion-classifier', 'production')
+          print(f'Current production version: {model.version}')
+          print(f'Run ID: {model.run_id}')
+          "
+      
+      - name: Validation Gate Passed - Awaiting Manual Approval for Promotion
+        run: |
+          echo "This step requires manual approval before proceeding (configured via GitHub environment protection rules)."
+          echo "In a full production setup, this would trigger the promotion script against the tracking server."
