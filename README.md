@@ -5,7 +5,7 @@ wrapped in a full production-grade MLOps pipeline — covering model training,
 containerized deployment, CI/CD-governed retraining, explainability, monitoring, 
 and alerting.
 
-## Project Status: Weeks 1-4 Complete, Group E In Progress
+## Project Status: Core system complete (Groups A–F). Final documentation and demo in progress (Group G).
 
 ## Overview
 
@@ -18,6 +18,29 @@ SHAP explainability, and live monitoring.
 The goal isn't just training an accurate model — it's demonstrating the full 
 lifecycle of operating, governing, and honestly evaluating an ML system in 
 production, including documented limitations discovered through rigorous testing.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    A[CICIDS2017 dataset<br/>2.02M rows, cleaned & labeled] --> B[Random Forest classifier]
+    A --> C[Isolation Forest anomaly detector]
+    B --> D[MLflow Model Registry<br/>versioned, served via 'production' alias]
+    C --> D
+    D --> E[Retrain]
+    E --> F[Validate vs production<br/>precision/recall gate]
+    F --> G[Human approval<br/>GitHub environment protection]
+    G -.promote.-> D
+    D --> H[FastAPI serving layer<br/>/predict /health /model-info /explain]
+    H --> I[Docker container]
+    H --> J[Kubernetes, 2 replicas]
+    I --> K[Monitoring & Governance]
+    J --> K
+    K --> L[Prometheus + Grafana<br/>live metrics]
+    K --> M[Evidently drift detection<br/>+ alert_check.py]
+    K --> N[SHAP explainability]
+    M -.triggers.-> E
+```
 
 ## Dataset
 
@@ -73,8 +96,10 @@ mimicry-based attacks.
   demonstrating orchestration and horizontal scaling
 - **GitHub Actions CI pipeline** automatically tests the API on every push (lean, 
   API-specific dependency set to keep CI fast and reliable)
-- **Live traffic simulator** (`simulator.py`) replays real test data against the 
-  running API at randomized intervals, mimicking live traffic
+- **Live traffic simulator** (`simulator.py`, `simulator_v2.py`) replays real test 
+  data against the running API — the v2 simulator uses variable attack/benign 
+  ratios, burst-pattern timing, and mixes in genuinely held-out attack traffic to 
+  mimic realistic, unpredictable live conditions
 
 ### Model Registry (MLflow)
 - MLflow deployed as a **real tracking server** (Dockerized, SQLite-backed) rather 
@@ -149,6 +174,7 @@ excluded from training from the start, for both the supervised classifier and
 the Isolation Forest.
 
 **Result:**
+
 | System | Detection rate on unseen PortScan |
 |---|---|
 | Supervised classifier (never trained on PortScan) | 0.17% |
@@ -171,6 +197,13 @@ to treat "minimal, ultra-short connections" as attack-like. This reveals that
 detection coverage is fundamentally bounded by the diversity of attack types 
 represented in training data, regardless of how statistically distinct an 
 unseen attack may be from other classes.
+
+**Important distinction:** this finding applies specifically to `holdout_classifier.pkl`, 
+a model deliberately trained without PortScan for this experiment. The actual 
+deployed production model (v3) was trained on the complete dataset, including 
+PortScan, and correctly detects it — confirmed via `simulator_v2.py` showing 
+100% detection across BENIGN, known-attack, and PortScan traffic when tested 
+against the real production API.
 
 This finding directly motivates the retraining/validation/promotion pipeline 
 built in this project: periodic retraining on newly-labeled attack types is 
@@ -256,7 +289,8 @@ not optional extras.
     │   ├── app.py                     # FastAPI serving layer
     │   ├── Dockerfile
     │   ├── deployment.yaml            # Kubernetes deployment + service
-    │   ├── simulator.py               # Live traffic simulator
+    │   ├── simulator.py                # Live traffic simulator (v1)
+    │   ├── simulator_v2.py             # Realistic simulator: variable ratios, bursts, novel traffic
     │   ├── drift_check.py             # Drift detection (sanity check)
     │   ├── drift_check_real.py        # Drift detection (real drift validation)
     │   ├── retrain.py                 # Retraining script
@@ -265,7 +299,8 @@ not optional extras.
     │   ├── explain.py                 # SHAP explainability
     │   ├── alert_check.py             # Drift/attack-rate alerting
     │   ├── train_holdout.py           # Novel-attack holdout training
-    │   └── test_novel_attack.py       # Novel-attack detection test
+    │   ├── test_novel_attack.py       # Novel-attack detection test
+    │   └── adversarial_eval.py        # Adversarial robustness evaluation
     ├── .github/workflows/
     │   ├── ci.yml                     # API smoke test on every push
     │   └── retrain-validate.yml       # Manual retrain/validation workflow
@@ -283,3 +318,19 @@ not optional extras.
     cd src
     uvicorn app:app --reload
 
+## Key Endpoints
+
+| Endpoint | Description |
+|---|---|
+| `GET /health` | Health check |
+| `POST /predict` | Classify traffic features as ATTACK or BENIGN |
+| `GET /model-info` | Currently-serving model version, run ID, timestamp |
+| `GET /explain` | Top features driving attack predictions (SHAP) |
+| `GET /metrics` | Prometheus-format metrics |
+
+## Next Steps
+
+- Full end-to-end demo recording showing the closed loop: drift detection → 
+  retraining trigger → validation gate → human approval → promotion → live 
+  model update
+- Final documentation polish
