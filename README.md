@@ -176,6 +176,68 @@ This finding directly motivates the retraining/validation/promotion pipeline
 built in this project: periodic retraining on newly-labeled attack types is 
 necessary, not optional, for maintaining detection coverage over time.
 
+## Robustness Evaluation (Adversarial Testing)
+
+To assess whether the classifier could be evaded by an attacker manipulating 
+traffic characteristics, existing attack samples were perturbed at the 
+feature level and re-evaluated.
+
+### Random Perturbation (Naive Evasion)
+Nine timing/volume features (Flow Duration, packet counts, byte counts, 
+inter-arrival times) were perturbed by up to ±100% in random, reduce, and 
+increase directions — simulating an attacker crudely altering traffic without 
+knowledge of the model.
+
+| Perturbation | Intensity | Evasion Rate |
+|---|---|---|
+| Random | ±15-20% | 0.15% |
+| Reduce | ±100% | 0.20% |
+| Increase | ±100% | 0.15% |
+
+**Result: the classifier is highly robust to naive/random perturbation**, with 
+evasion rates barely above the 0.05% baseline miss rate even at maximum (100%) 
+intensity. This is consistent with Random Forest's use of all 78 features in 
+its voting mechanism — perturbing a subset still leaves most trees with 
+sufficient unperturbed signal to classify correctly.
+
+### Targeted Perturbation (Informed Evasion)
+The same test was repeated, but perturbing only the **top 10 features ranked 
+by SHAP importance** (Destination Port, packet length statistics, backward 
+segment sizes) at ±50% intensity — simulating an attacker with knowledge of 
+which features the model relies on most (information that would be available 
+via this project's own `/explain` endpoint, or discoverable through probing).
+
+| Perturbation | Intensity | Evasion Rate |
+|---|---|---|
+| Random (9 generic features) | ±100% | 0.20% |
+| **Targeted (top 10 SHAP features)** | **±50%** | **19.80%** |
+
+**Result: targeted, SHAP-informed perturbation is approximately 100x more 
+effective than random perturbation, despite using half the intensity.** This 
+reveals a meaningful, quantified vulnerability: the model's robustness holds 
+against generic noise but degrades substantially against an adversary with 
+insight into feature importance.
+
+### Scope and Honest Limitations
+This evaluation manipulates numerical flow features directly, not raw packet 
+data — it measures the model's sensitivity to feature-space perturbation, not 
+a proven, executable real-world evasion attack (which would require 
+demonstrating that an attacker could craft actual network traffic producing 
+these specific perturbed feature values). This is a meaningful but bounded 
+distinction: the finding indicates a genuine sensitivity worth addressing 
+(e.g., via adversarial training, ensemble diversity, or restricting explainability 
+exposure in production), not a demonstrated exploit.
+
+### Combined with the Novel Attack Finding
+Together with the held-out PortScan experiment, this evaluation shows the 
+classifier's strong headline accuracy (99.9%+) holds under normal conditions 
+and even under naive adversarial pressure, but has two specific, quantified 
+weak points: complete blindness to attack types entirely absent from training 
+data, and meaningful vulnerability to feature-informed evasion. Both findings 
+directly motivate the retraining and validation pipeline built in this 
+project — periodic retraining and monitoring are necessary countermeasures, 
+not optional extras.
+
 ## Tech Stack
 
 - **ML:** Python, scikit-learn, XGBoost, pandas, numpy, SHAP
@@ -221,11 +283,3 @@ necessary, not optional, for maintaining detection coverage over time.
     cd src
     uvicorn app:app --reload
 
-## Next Steps
-
-- **Group E (in progress):** rewrite traffic simulator with variable attack/benign 
-  ratios and burst-pattern timing
-- **Group F:** adversarial/robustness evaluation — perturb existing attack samples 
-  to test evasion resistance
-- **Group G:** updated architecture diagram, full end-to-end demo recording, 
-  final documentation polish
