@@ -1,0 +1,42 @@
+[
+  {
+    "feature": "Destination Port",
+    "mean_abs_shap": 0.019957401409604655
+  },
+  {
+    "feature": "Total Length of Bwd Packets",
+    "mean_abs_shap": 0.015951442010195174
+  },
+  {
+    "feature": "Avg Bwd Segment Size",
+    "mean_abs_shap": 0.015157223778597882
+  },
+  {
+    "feature": "Average Packet Size",
+    "mean_abs_shap": 0.013390606221689133
+  },
+  {
+    "feature": "Max Packet Length",
+    "mean_abs_shap": 0.013345199328762452
+  },
+  {
+    "feature": "Init_Win_bytes_backward",
+    "mean_abs_shap": 0.010170082840181123
+  },
+  {
+    "feature": "Subflow Bwd Bytes",
+    "mean_abs_shap": 0.01001768065371614
+  },
+  {
+    "feature": "Bwd Packet Length Std",
+    "mean_abs_shap": 0.009853897456794686
+  },
+  {
+    "feature": "Fwd Packet Length Max",
+    "mean_abs_shap": 0.00972095798566288
+  },
+  {
+    "feature": "Packet Length Variance",
+    "mean_abs_shap": 0.008935367274315476
+  }
+]

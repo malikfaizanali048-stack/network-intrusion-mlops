@@ -2,9 +2,11 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import pandas as pd
 import mlflow
+import json
 import mlflow.sklearn
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_client import Counter, Histogram
+
 
 app = FastAPI(title="Network Intrusion Detection API")
 
@@ -80,3 +82,14 @@ def predict(data: TrafficFeatures):
         "prediction": result,
         "confidence": confidence
     }
+
+
+
+@app.get("/explain")
+def explain():
+    try:
+        with open("shap_feature_importance.json") as f:
+            top_features = json.load(f)
+        return {"top_features_driving_attack_predictions": top_features}
+    except FileNotFoundError:
+        return {"error": "SHAP explanation data not available"}
