@@ -3,7 +3,9 @@ uvicorn
 pandas
 numpy
 scikit-learn
-mlflow
 prometheus-fastapi-instrumentator
 prometheus_client
 pydantic
+authlib
+itsdangerous
+python-dotenv
