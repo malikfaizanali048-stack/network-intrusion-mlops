@@ -1,5 +1,9 @@
 FROM python:3.11-slim
 
+# cache-bust-v2
+WORKDIR /app
+FROM python:3.11-slim
+
 WORKDIR /app
 
 COPY requirements-api.txt .
