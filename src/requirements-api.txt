@@ -7,5 +7,6 @@ prometheus-fastapi-instrumentator
 prometheus_client
 pydantic
 authlib
+httpx
 itsdangerous
 python-dotenv
